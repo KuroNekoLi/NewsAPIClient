@@ -1,0 +1,114 @@
+@startuml
+
+' 定義 interface
+interface "NewsAPIService" as NewsAPIService {
+  +suspend fun getTopHeadlines(country : String, page : Int, apiKey : String) : Response<APIResponse>
+}
+
+interface "NewsRemoteDataSource" as NewsRemoteDataSource {
+  +suspend fun getTopHeadlines() : Response<APIResponse>
+}
+
+interface "NewsRepository" as NewsRepository {
+  +suspend fun getNewsHeadlines(): Resource<APIResponse>
+  +suspend fun getSearchedNews(searchQuery:String): Resource<APIResponse>
+  +suspend fun saveNews(article: Article)
+  +suspend fun deleteNews(article: Article)
+  +fun getSaveNews(): Flow<List<Article>>
+}
+
+' 定義 class
+class "NewsRemoteDataSourceImpl" as NewsRemoteDataSourceImpl {
+  -newsAPIService: NewsAPIService
+  -country: String
+  -page: Int
+  +override suspend fun getTopHeadlines(): Response<APIResponse>
+}
+
+class "NewsRepositoryImpl" as NewsRepositoryImpl {
+  -newsRemoteDataSource: NewsRemoteDataSource
+  +override suspend fun getNewsHeadlines(): Resource<APIResponse>
+  +override suspend fun getSearchedNews(searchQuery:String): Resource<APIResponse>
+  +override suspend fun saveNews(article: Article)
+  +override suspend fun deleteNews(article: Article)
+  +override fun getSaveNews(): Flow<List<Article>>
+}
+
+' 定義 Data class
+class "APIResponse" as APIResponse {
+  +articles: List<Article>
+  +status: String
+  +totalResults: Int
+}
+
+class "Article" as Article {
+  +author: String
+  +content: String
+  +description: String
+  +publishedAt: String
+  +source: Source
+  +title: String
+  +url: String
+  +urlToImage: String
+}
+
+class "Source" as Source {
+  +id: String
+  +name: String
+}
+
+' 定義 Sealed class
+abstract class "Resource<T>" as Resource {
+  #data: T?
+  #message: String?
+}
+class "Success<T>" as Success {
+}
+class "Loading<T>" as Loading {
+}
+class "Error<T>" as Error {
+}
+
+' 定義 UseCase class
+class "DeleteSavedNewsUseCase" as DeleteSavedNewsUseCase {
+  -newsRepository: NewsRepository
+  +suspend fun execute(article: Article)
+}
+
+class "GetNewsHeadlinesUseCase" as GetNewsHeadlinesUseCase {
+  -newsRepository: NewsRepository
+  +suspend fun execute(): Resource<APIResponse>
+}
+
+class "GetSavedNewsUseCase" as GetSavedNewsUseCase {
+  -newsRepository: NewsRepository
+  +fun execute(): Flow<List<Article>>
+}
+
+class "GetSearchedNewsUseCase" as GetSearchedNewsUseCase {
+  -newsRepository: NewsRepository
+  +suspend fun execute(searchQuery:String): Resource<APIResponse>
+}
+
+class "SaveNewsUseCase" as SaveNewsUseCase {
+  -newsRepository: NewsRepository
+  +suspend fun execute(article: Article)
+}
+
+' 定義關係
+NewsRemoteDataSourceImpl --|> NewsRemoteDataSource
+NewsRemoteDataSourceImpl -- NewsAPIService
+NewsRepositoryImpl --|> NewsRepository
+NewsRepositoryImpl -- NewsRemoteDataSource
+Success --|> Resource
+Loading --|> Resource
+Error --|> Resource
+Article -- Source
+DeleteSavedNewsUseCase -- NewsRepository
+GetNewsHeadlinesUseCase -- NewsRepository
+GetSavedNewsUseCase -- News
+' 定義關係（續）
+GetSearchedNewsUseCase -- NewsRepository
+SaveNewsUseCase -- NewsRepository
+
+@enduml
